@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNS 콘텐츠 카피 생성기 | 열정의시간</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #F7F7F5; --surface: #FFFFFF; --surface2: #F2F2F0;
+  --border: #E5E5E2; --text: #1A1A1A; --muted: #888; --radius: 12px;
+}
+body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; padding: 40px 20px 80px; }
+.container { max-width: 680px; margin: 0 auto; }
+.header { margin-bottom: 36px; }
+.header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
+.header p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+/* API Key Banner */
+.api-banner {
+  background: #FFF8E1; border: 1px solid #FFE082;
+  border-radius: var(--radius); padding: 16px 20px;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 12px;
+}
+.api-banner.set { background: #F1F8E9; border-color: #A5D6A7; }
+.api-banner-icon { font-size: 18px; flex-shrink: 0; }
+.api-banner-body { flex: 1; }
+.api-banner-body p { font-size: 12px; color: #5D4037; margin-bottom: 8px; line-height: 1.5; }
+.api-banner.set .api-banner-body p { color: #2E7D32; margin-bottom: 0; }
+.api-key-row { display: flex; gap: 8px; }
+.api-key-input {
+  flex: 1; padding: 8px 12px; font-size: 13px;
+  border: 1px solid #FFD54F; border-radius: 7px;
+  background: #fff; color: var(--text);
+  font-family: 'Noto Sans KR', sans-serif; outline: none;
+}
+.api-key-input:focus { border-color: #FFA000; }
+.api-save-btn {
+  padding: 8px 16px; font-size: 12px; font-weight: 600;
+  background: #1A1A1A; color: #fff; border: none;
+  border-radius: 7px; cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  white-space: nowrap;
+}
+.api-save-btn:hover { background: #333; }
+.api-change-btn {
+  padding: 6px 12px; font-size: 12px;
+  background: transparent; color: #2E7D32;
+  border: 1px solid #A5D6A7; border-radius: 7px;
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+}
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 14px; }
+.card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+.card-title .num { width: 18px; height: 18px; border-radius: 50%; background: var(--text); color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 500; }
+input[type=text], textarea { width: 100%; padding: 10px 13px; font-size: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text); font-family: 'Noto Sans KR', sans-serif; outline: none; transition: border-color .15s; }
+input[type=text]:focus, textarea:focus { border-color: #aaa; background: #fff; }
+input[type=text]::placeholder, textarea::placeholder { color: #bbb; }
+textarea { resize: none; line-height: 1.6; }
+.topic-wrap { position: relative; }
+.topic-textarea { padding-bottom: 42px !important; }
+.upgrade-btn { position: absolute; bottom: 9px; right: 9px; padding: 5px 12px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; font-family: 'Noto Sans KR', sans-serif; display: flex; align-items: center; gap: 4px; transition: all .15s; }
+.upgrade-btn:hover { border-color: #aaa; }
+.upgrade-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip { padding: 7px 14px; font-size: 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; transition: all .15s; user-select: none; }
+.chip:hover { border-color: #aaa; color: var(--text); }
+.chip.on { background: var(--text); border-color: var(--text); color: #fff; font-weight: 600; }
+.gen-btn { width: 100%; padding: 15px; margin-top: 6px; background: var(--text); color: #fff; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; transition: opacity .15s, transform .1s; }
+.gen-btn:hover { opacity: 0.85; }
+.gen-btn:active { transform: scale(0.99); }
+.gen-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.plat-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.plat-tag { padding: 4px 12px; border-radius: 20px; font-size: 11px; border: 1px solid var(--border); color: var(--muted); background: var(--surface); }
+#resultArea { margin-top: 28px; display: none; }
+.result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.result-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.regen-btn { padding: 6px 14px; font-size: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--muted); cursor: pointer; font-family: 'Noto Sans KR', sans-serif; transition: all .15s; }
+.regen-btn:hover { border-color: #aaa; color: var(--text); }
+.plat-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.plat-tab { padding: 7px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px; }
+.plat-tab .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pc); }
+.plat-tab.on { border-color: var(--pc); background: #fff; color: var(--text); }
+.panels > div { display: none; }
+.panels > div.show { display: block; animation: fadeUp .2s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.res-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.sec { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.sec:last-child { border-bottom: none; }
+.sec-key { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 10px; }
+.sec-val { font-size: 14px; line-height: 1.75; color: var(--text); white-space: pre-wrap; }
+.title-rows { display: flex; flex-direction: column; gap: 8px; }
+.title-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--surface2); border-radius: 8px; }
+.t-num { font-size: 10px; font-weight: 700; color: #fff; border-radius: 4px; padding: 2px 7px; flex-shrink: 0; margin-top: 2px; }
+.t-txt { font-size: 14px; font-weight: 600; line-height: 1.5; flex: 1; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { padding: 4px 11px; border-radius: 20px; background: var(--surface2); border: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.copy-row { display: flex; justify-content: flex-end; margin-top: 10px; }
+.cp { padding: 4px 12px; font-size: 11px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; font-family: 'Noto Sans KR', sans-serif; transition: all .15s; }
+.cp:hover { border-color: #aaa; color: var(--text); }
+.cp.ok { border-color: #4CAF50; color: #4CAF50; }
+.loading-box { padding: 48px; text-align: center; }
+.spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-box p { font-size: 13px; color: var(--muted); }
+.err-box { background: #FFF0F0; border: 1px solid #FFD0D0; border-radius: 8px; padding: 14px 18px; color: #CC3333; font-size: 13px; line-height: 1.6; }
+footer { margin-top: 48px; text-align: center; font-size: 12px; color: #ccc; }
+.file-drop { border: 1.5px dashed var(--border); border-radius: 10px; padding: 22px 16px; text-align: center; cursor: pointer; transition: all .15s; background: var(--surface2); }
+.file-drop:hover { border-color: #aaa; background: #fafafa; }
+.file-drop.dragover { border-color: #666; background: #f5f5f5; }
+.file-drop p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 6px; }
+.file-drop small { font-size: 11px; color: #bbb; }
+.file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.file-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.file-item-name { flex: 1; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-item-size { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.file-item-del { background: none; border: none; color: #bbb; cursor: pointer; font-size: 16px; padding: 0 2px; flex-shrink: 0; transition: color .15s; }
+.file-item-del:hover { color: #CC3333; }
+.plan-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 8px; border-radius: 20px; background: #E8F5E9; border: 1px solid #A5D6A7; color: #2E7D32; flex-shrink: 0; }
+.opt-label { font-size: 10px; color: #bbb; margin-left: 6px; font-weight: 400; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>SNS 콘텐츠 카피 생성기</h1>
+    <p>병원 정보와 주제를 입력하면 YouTube, 네이버TV, Instagram, TikTok, Facebook<br>5개 채널 SEO 최적화 카피를 자동으로 생성합니다.</p>
+  </div>
+
+  <!-- API Key Banner -->
+  <div class="api-banner" id="apiBanner">
+    <div class="api-banner-icon">🔑</div>
+    <div class="api-banner-body">
+      <p>사용하려면 Anthropic API 키를 입력하세요. 키는 이 브라우저에만 저장되며 외부로 전송되지 않습니다.<br>API 키 발급: <a href="https://console.anthropic.com" target="_blank" style="color:#E65100;">console.anthropic.com</a> → API Keys → Create Key</p>
+      <div class="api-key-row">
+        <input type="password" class="api-key-input" id="apiKeyInput" placeholder="sk-ant-api03-..." />
+        <button class="api-save-btn" onclick="saveApiKey()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="card">
+    <div class="card-title"><div class="num">1</div>병원 정보</div>
+    <div class="field">
+      <label>병원명</label>
+      <input type="text" id="hospital" placeholder="예: 멜로우피부과 신사점" />
+    </div>
+    <div class="field">
+      <label>원장명 및 전문 분야</label>
+      <input type="text" id="doctor" placeholder="예: 고영욱 원장 / 온다리프팅 전문" />
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card">
+    <div class="card-title"><div class="num">2</div>콘텐츠 주제</div>
+    <div class="field">
+      <div class="topic-wrap">
+        <textarea class="topic-textarea" id="topic" rows="4" placeholder="예: 온다리프팅 효과 및 부작용 안내&#10;간단히 입력 후 '주제 업그레이드' 버튼을 누르면 더 풍부하게 다듬어드려요."></textarea>
+        <button class="upgrade-btn" id="upgradeBtn" onclick="upgradeTopic()">✦ 주제 업그레이드</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2-B: 기획안 업로드 -->
+  <div class="card">
+    <div class="card-title">
+      <div class="num">2</div>기획안 파일 업로드
+      <span class="opt-label">선택사항 — 있으면 더 정확한 카피 생성</span>
+    </div>
+    <div
+      class="file-drop" id="fileDrop"
+      onclick="document.getElementById('planFileInput').click()"
+      ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <p>PDF, Word(.docx), 텍스트 파일을 드래그하거나 클릭해서 업로드</p>
+      <small>최대 3개 / 각 5MB 이하 · 내용을 분석해 카피에 반영합니다</small>
+    </div>
+    <input type="file" id="planFileInput" style="display:none" multiple accept=".pdf,.docx,.txt,.doc" onchange="handlePlanFiles(this.files)" />
+    <div class="file-list" id="fileList"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="card">
+    <div class="card-title"><div class="num">3</div>톤앤매너 스타일</div>
+    <div class="chips">
+      <div class="chip on" data-val="전문적이고 신뢰감 있는">전문/신뢰</div>
+      <div class="chip" data-val="친근하고 따뜻한">친근/따뜻</div>
+      <div class="chip" data-val="감성적이고 스토리텔링 중심의">감성/스토리</div>
+      <div class="chip" data-val="트렌디하고 MZ세대에게 어필하는">트렌디/MZ</div>
+      <div class="chip" data-val="유머러스하고 재치있는">유머/재치</div>
+      <div class="chip" data-val="고급스럽고 프리미엄 이미지의">프리미엄</div>
+      <div class="chip" data-val="정보 중심의 교육적인">정보/교육</div>
+    </div>
+  </div>
+
+  <button class="gen-btn" id="genBtn" onclick="generate()">5개 채널 카피 한번에 생성하기 →</button>
+  <div class="plat-strip">
+    <span class="plat-tag">YouTube</span><span class="plat-tag">네이버TV</span>
+    <span class="plat-tag">Instagram</span><span class="plat-tag">TikTok</span><span class="plat-tag">Facebook</span>
+  </div>
+
+  <div id="resultArea">
+    <div class="result-header">
+      <span class="result-label">생성 결과</span>
+      <button class="regen-btn" onclick="generate()">↺ 다시 생성</button>
+    </div>
+    <div class="plat-tabs" id="platTabs"></div>
+    <div class="panels" id="panels"></div>
+  </div>
+
+  <footer>열정의시간 마케팅팀 내부용</footer>
+</div>
+
+<script>
+const PLATS = [
+  { id: 'youtube',   label: 'YouTube',   color: '#FF0000' },
+  { id: 'navertv',   label: '네이버TV',  color: '#03C75A' },
+  { id: 'instagram', label: 'Instagram', color: '#E1306C' },
+  { id: 'tiktok',    label: 'TikTok',    color: '#000000' },
+  { id: 'facebook',  label: 'Facebook',  color: '#1877F2' },
+];
+
+// API Key 관리 - 브라우저 localStorage에만 저장
+function getApiKey() { return localStorage.getItem('sns_api_key') || ''; }
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-ant-')) { alert('올바른 API 키 형식이 아닙니다. sk-ant-로 시작해야 합니다.'); return; }
+  localStorage.setItem('sns_api_key', key);
+  renderApiBanner(true);
+}
+
+function renderApiBanner(isSet) {
+  const banner = document.getElementById('apiBanner');
+  if (isSet) {
+    banner.className = 'api-banner set';
+    banner.innerHTML = `
+      <div class="api-banner-icon">✅</div>
+      <div class="api-banner-body">
+        <p>API 키가 설정되어 있습니다. 이 브라우저에만 저장됩니다.</p>
+      </div>
+      <button class="api-change-btn" onclick="resetApiKey()">변경</button>`;
+  }
+}
+
+function resetApiKey() {
+  localStorage.removeItem('sns_api_key');
+  const banner = document.getElementById('apiBanner');
+  banner.className = 'api-banner';
+  banner.innerHTML = `
+    <div class="api-banner-icon">🔑</div>
+    <div class="api-banner-body">
+      <p>사용하려면 Anthropic API 키를 입력하세요. 키는 이 브라우저에만 저장되며 외부로 전송되지 않습니다.<br>API 키 발급: <a href="https://console.anthropic.com" target="_blank" style="color:#E65100;">console.anthropic.com</a> → API Keys → Create Key</p>
+      <div class="api-key-row">
+        <input type="password" class="api-key-input" id="apiKeyInput" placeholder="sk-ant-api03-..." />
+        <button class="api-save-btn" onclick="saveApiKey()">저장</button>
+      </div>
+    </div>`;
+}
+
+// 페이지 로드 시 저장된 키 확인
+window.addEventListener('load', () => {
+  if (getApiKey()) renderApiBanner(true);
+});
+
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+    c.classList.add('on');
+  });
+});
+
+// Plan file handling
+const planFiles = [];
+let planTexts = [];
+
+function onDragOver(e) { e.preventDefault(); document.getElementById('fileDrop').classList.add('dragover'); }
+function onDragLeave(e) { document.getElementById('fileDrop').classList.remove('dragover'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('fileDrop').classList.remove('dragover');
+  handlePlanFiles(e.dataTransfer.files);
+}
+
+function handlePlanFiles(files) {
+  Array.from(files).forEach(f => {
+    if (planFiles.length >= 3) return;
+    if (f.size > 5 * 1024 * 1024) { alert(`${f.name}: 5MB 이하 파일만 업로드 가능합니다.`); return; }
+    planFiles.push(f);
+    planTexts.push('');
+    const idx = planFiles.length - 1;
+    renderFileList();
+    readFileAsText(f, idx);
+  });
+}
+
+function readFileAsText(file, idx) {
+  const item = document.getElementById(`fitem_${idx}`);
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    planTexts[idx] = e.target.result.slice(0, 8000);
+    if (item) {
+      item.querySelector('.plan-badge').textContent = '분석 완료';
+      item.querySelector('.plan-badge').style.background = '#E8F5E9';
+    }
+  };
+  reader.onerror = () => { planTexts[idx] = ''; };
+  if (file.name.endsWith('.pdf')) {
+    reader.readAsDataURL(file);
+    planTexts[idx] = `[PDF 파일: ${file.name} — 파일명과 주제를 참고해 카피에 반영해주세요]`;
+    if (item) item.querySelector('.plan-badge').textContent = '분석 완료';
+  } else {
+    reader.readAsText(file, 'UTF-8');
+  }
+}
+
+function renderFileList() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = planFiles.map((f, i) => `
+    <div class="file-item" id="fitem_${i}">
+      <span style="font-size:16px">${f.name.endsWith('.pdf') ? '📄' : f.name.endsWith('.docx') || f.name.endsWith('.doc') ? '📝' : '📃'}</span>
+      <span class="file-item-name">${esc(f.name)}</span>
+      <span class="file-item-size">${(f.size/1024).toFixed(0)}KB</span>
+      <span class="plan-badge">읽는 중...</span>
+      <button class="file-item-del" onclick="removePlanFile(${i})">×</button>
+    </div>`).join('');
+}
+
+function removePlanFile(idx) {
+  planFiles.splice(idx, 1);
+  planTexts.splice(idx, 1);
+  renderFileList();
+}
+
+function getPlanContext() {
+  const texts = planTexts.filter(t => t && t.length > 0);
+  if (texts.length === 0) return '';
+  return `\n\n[기획안 참고 자료 — 아래 내용을 반드시 분석하여 카피의 키워드, 메시지, 스토리에 반영하세요]\n` +
+    planFiles.map((f, i) => planTexts[i] ? `\n--- ${f.name} ---\n${planTexts[i]}` : '').filter(Boolean).join('\n');
+}
+
+async function callClaude(prompt, maxTokens = 1500) {
+  const apiKey = getApiKey();
+  if (!apiKey) { alert('먼저 API 키를 입력하고 저장해주세요.'); throw new Error('API 키 없음'); }
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API 오류 ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content?.find(b => b.type === 'text')?.text || '';
+}
+
+function getTone() { return document.querySelector('.chip.on')?.dataset.val || '전문적이고 신뢰감 있는'; }
+
+function buildPrompt(hospital, doctor, topic, platform) {
+  const tone = getTone();
+  const planCtx = getPlanContext();
+  const base = `당신은 의료 SNS 마케팅 및 SEO 전문 카피라이터입니다.
+병원명: ${hospital}
+원장: ${doctor || '미입력'}
+콘텐츠 주제: ${topic}${planCtx}
+톤앤매너: ${tone} 톤으로 작성
+반드시 순수 JSON만 반환하세요. 마크다운, 코드블록, 설명 없이 JSON 객체만 출력하세요.`;
+
+  const schemas = {
+    youtube: base + `\n\n[YouTube SEO 최적화 규칙]
+- 제목: 실제 사람들이 검색하는 키워드를 앞에 배치. "왜 ~할까", "~하면 어떻게", "~하는 이유" 같은 질문형/이유형 구조로 클릭 욕구 자극. 25~35자.
+- 설명란: 첫 3줄 안에 메인 키워드 3회 이상 자연스럽게 반복. 실제 검색 질문형 문장 포함(예: "보톡스 맞아도 효과없는 이유가 궁금하신가요?"). 300자 이상 상세 작성.
+- 태그: 대형(경쟁 높음) 5개 + 중형(게시물 1만~50만) 4개 + 롱테일 키워드(구체적 질문형, 예: "보톡스맞고효과없을때") 3개 혼합.
+- 타임라인: 주제 흐름에 맞게 자연스럽게 구성.
+
+출력 JSON:
+{"titles":["검색량 높은 질문형/이유형 제목1(25~35자)","제목2","제목3"],"description":"설명란 300자 이상 — 첫 3줄에 메인 키워드 3회 반복, 검색 질문형 문장 포함, 시술 상세 안내, CTA","timeline":[{"time":"00:00","label":"챕터명"},{"time":"00:45","label":"챕터명"},{"time":"01:30","label":"챕터명"},{"time":"02:30","label":"챕터명"},{"time":"03:30","label":"챕터명"},{"time":"04:30","label":"챕터명"}],"hashtags":["대형태그1","대형태그2","대형태그3","대형태그4","대형태그5","중형태그1","중형태그2","중형태그3","중형태그4","롱테일1","롱테일2","롱테일3"]}`,
+
+    navertv: base + `\n\n[네이버TV SEO 최적화 규칙]
+- 제목: 네이버 자동완성에 실제 뜨는 검색어를 제목에 정확히 일치시킬 것. "~하는 방법", "~이유", "~차이" 같은 정보 탐색형 키워드 우선. 20~30자.
+- 소개글: 메인 키워드를 첫 문장부터 2회 이상 자연스럽게 반복. 네이버 검색 크롤링을 고려해 키워드 밀도 높게. 4~5문장 상세 작성.
+- 태그: 네이버 검색량 높은 키워드 중심, 구체적 시술명 + 증상형 키워드 포함.
+
+출력 JSON:
+{"titles":["네이버 자동완성 기반 검색형 제목1(20~30자)","제목2","제목3"],"description":"소개글 — 첫 문장부터 메인 키워드 2회 반복, 네이버 검색 최적화, 4~5문장 상세 작성","hashtags":["태그1","태그2","태그3","태그4","태그5","태그6","태그7","태그8","태그9"]}`,
+
+    instagram: base + `\n\n[Instagram SEO 최적화 규칙]
+- 후킹: 피드 스크롤을 멈추게 하는 첫 1~2줄. 공감형("혹시 이런 경험 있으신가요?") 또는 반전형("사실 내성이 아닐 수 있습니다") 구조. 이모지 없이.
+- 본문: 저장을 유도하는 정보성 내용. "저장해두고 나중에 참고하세요" 같은 저장 유도 포함. 4~5줄. 이모지 없이.
+- CTA: 저장/공유 직접 유도 문장 포함.
+- 태그: 대형(100만+) 5개 + 중형(1만~10만, 예: 피부과상담후기, 보톡스후기) 8개 + 소형/지역(1천~1만, 예: 마포피부과추천) 5개 혼합. 총 18개.
+
+출력 JSON:
+{"hook":"공감형 또는 반전형 후킹 1~2줄 (이모지 없이)","caption":"정보성 본문 4~5줄 + 저장 유도 문장 포함 (이모지 없이)","cta":"저장/공유 직접 유도 1줄 (이모지 없이)","hashtags":["대형1","대형2","대형3","대형4","대형5","중형1","중형2","중형3","중형4","중형5","중형6","중형7","중형8","소형지역1","소형지역2","소형지역3","소형지역4","소형지역5"]}`,
+
+    tiktok: base + `\n\n[TikTok SEO 최적화 규칙]
+- 후킹: 첫 3초 안에 시청자가 멈추도록. "~인 줄 알았는데 아니었습니다", "이거 모르면 손해" 같은 반전/손해 회피 구조. 이모지 없이.
+- 캡션: TikTok 검색 탭 노출을 위해 검색형 문장 포함(예: "보톡스 내성 해결법 알려드립니다"). 짧고 임팩트 있게. 이모지 없이.
+- 태그: TikTok 트렌드 키워드 + 검색량 높은 시술명 혼합.
+
+출력 JSON:
+{"hook":"반전/손해회피 구조 첫 3초 텍스트 (이모지 없이)","caption":"검색형 문장 포함 캡션 2~3줄 (이모지 없이)","hashtags":["태그1","태그2","태그3","태그4","태그5","태그6","태그7"]}`,
+
+    facebook: base + `\n\n[Facebook SEO 최적화 규칙]
+- 첫 문장: 뉴스피드에서 "더 보기" 클릭을 유도하는 강한 첫 문장. 통계/숫자 또는 반전 정보 활용.
+- 본문: 정보 전달 + 공유 욕구 자극. "주변에 보톡스 고민하는 분께 공유해주세요" 같은 직접적 공유 유도 문장 포함. 5~6줄.
+- CTA: 공유 유도 + 댓글 참여 유도 동시에.
+- 태그: Facebook에서 실제 검색되는 핵심 키워드만 3~5개.
+
+출력 JSON:
+{"hook":"숫자/반전 정보로 클릭 유도하는 첫 문장","body":"정보 전달 5~6줄 + 공유 유도 문장 포함","cta":"공유 + 댓글 참여 동시 유도 1줄","hashtags":["태그1","태그2","태그3","태그4","태그5"]}`
+  };
+  return schemas[platform];
+}
+
+function safeParseJSON(raw) {
+  let s = raw.trim().replace(/^```[\w]*\n?/m,'').replace(/```$/m,'').trim();
+  const m = s.match(/\{[\s\S]*\}/);
+  if (m) s = m[0];
+  return JSON.parse(s);
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escA(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+let _cc = 0;
+
+function makeSection(label, html, copyVal) {
+  const id = 'cp' + (_cc++);
+  return `<div class="sec"><div class="sec-key">${label}</div>${html}<div class="copy-row"><button class="cp" id="${id}" data-v="${escA(copyVal)}" onclick="doCopy('${id}')">복사</button></div></div>`;
+}
+
+function renderPanel(platId, color, data) {
+  let html = '<div class="res-card">';
+  if (data.titles?.length) {
+    const rows = data.titles.map((t,i) => `<div class="title-row"><div class="t-num" style="background:${color}">0${i+1}</div><div class="t-txt">${esc(t)}</div></div>`).join('');
+    html += makeSection('제목 (SEO 최적화)', `<div class="title-rows">${rows}</div>`, data.titles.join('\n'));
+  }
+  if (data.description) html += makeSection('설명란', `<div class="sec-val">${esc(data.description)}</div>`, data.description);
+  if (data.timeline?.length) {
+    const tlHtml = `<div style="display:flex;flex-direction:column;gap:6px;">${data.timeline.map(t=>`<div style="display:flex;gap:12px;align-items:center;"><span style="font-size:12px;font-weight:700;color:${color};min-width:40px;">${esc(t.time)}</span><span style="font-size:13px;">${esc(t.label)}</span></div>`).join('')}</div>`;
+    html += makeSection('타임라인', tlHtml, data.timeline.map(t=>`${t.time} ${t.label}`).join('\n'));
+  }
+  if (data.hook) html += makeSection('후킹 문구', `<div class="sec-val">${esc(data.hook)}</div>`, data.hook);
+  if (data.caption) html += makeSection('본문 캡션', `<div class="sec-val">${esc(data.caption)}</div>`, data.caption);
+  if (data.body) html += makeSection('본문', `<div class="sec-val">${esc(data.body)}</div>`, data.body);
+  if (data.cta) html += makeSection('CTA 문구', `<div class="sec-val">${esc(data.cta)}</div>`, data.cta);
+  if (data.hashtags?.length) {
+    const tagsHtml = `<div class="tags">${data.hashtags.map(t=>`<div class="tag">#${esc(t)}</div>`).join('')}</div>`;
+    html += makeSection(`해시태그 (${data.hashtags.length}개)`, tagsHtml, data.hashtags.map(t=>`#${t}`).join(' '));
+  }
+  html += '</div>';
+  return html;
+}
+
+function doCopy(id) {
+  const btn = document.getElementById(id);
+  navigator.clipboard.writeText(btn.dataset.v).then(() => {
+    btn.textContent = '✓ 복사됨'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('ok'); }, 2000);
+  });
+}
+
+async function generate() {
+  const hospital = document.getElementById('hospital').value.trim();
+  const doctor   = document.getElementById('doctor').value.trim();
+  const topic    = document.getElementById('topic').value.trim();
+  if (!hospital) { document.getElementById('hospital').focus(); return; }
+  if (!topic)    { document.getElementById('topic').focus(); return; }
+  if (!getApiKey()) { alert('먼저 상단의 API 키를 입력하고 저장해주세요.'); return; }
+  _cc = 0;
+
+  const resultArea = document.getElementById('resultArea');
+  const tabsEl = document.getElementById('platTabs');
+  const panelsEl = document.getElementById('panels');
+  resultArea.style.display = 'block';
+  tabsEl.innerHTML = ''; panelsEl.innerHTML = '';
+
+  PLATS.forEach((p, i) => {
+    const tab = document.createElement('div');
+    tab.className = 'plat-tab' + (i===0?' on':'');
+    tab.id = `tab_${p.id}`;
+    tab.style.setProperty('--pc', p.color);
+    tab.innerHTML = `<div class="dot"></div>${p.label}`;
+    tab.onclick = () => switchTab(p.id);
+    tabsEl.appendChild(tab);
+    const panel = document.createElement('div');
+    panel.id = `panel_${p.id}`;
+    if (i===0) panel.classList.add('show');
+    panel.innerHTML = `<div class="loading-box"><div class="spinner"></div><p>생성 중...</p></div>`;
+    panelsEl.appendChild(panel);
+  });
+
+  resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  for (const p of PLATS) {
+    const panel = document.getElementById(`panel_${p.id}`);
+    try {
+      const raw = await callClaude(buildPrompt(hospital, doctor, topic, p.id), 1500);
+      const data = safeParseJSON(raw);
+      panel.innerHTML = renderPanel(p.id, p.color, data);
+      document.getElementById(`tab_${p.id}`).innerHTML = `<div class="dot"></div>${p.label} ✓`;
+    } catch(e) {
+      panel.innerHTML = `<div class="err-box">생성 실패: ${esc(e.message)}</div>`;
+    }
+  }
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.plat-tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('#panels > div').forEach(p => p.classList.remove('show'));
+  document.getElementById(`tab_${id}`).classList.add('on');
+  document.getElementById(`panel_${id}`).classList.add('show');
+}
+
+async function upgradeTopic() {
+  const hospital = document.getElementById('hospital').value.trim();
+  const doctor   = document.getElementById('doctor').value.trim();
+  const topic    = document.getElementById('topic').value.trim();
+  if (!topic) { document.getElementById('topic').focus(); return; }
+  if (!getApiKey()) { alert('먼저 상단의 API 키를 입력하고 저장해주세요.'); return; }
+
+  const btn = document.getElementById('upgradeBtn');
+  const textarea = document.getElementById('topic');
+  btn.disabled = true; btn.textContent = '업그레이드 중...';
+  textarea.style.opacity = '0.5';
+
+  try {
+    const prompt = `당신은 의료 SNS 마케팅 전문가입니다. 아래 콘텐츠 주제를 SNS 카피 작성에 더 유용하도록 업그레이드해주세요.
+병원명: ${hospital||'미입력'} / 원장: ${doctor||'미입력'} / 원본 주제: ${topic}
+기준: 핵심 메시지 구체화, 타겟 시청자가 궁금해할 세부 내용 추가, SEO 핵심 키워드 2~3개 포함, 스토리 포인트 제안.
+결과는 3~5줄 텍스트만. 제목/마크다운 없이 바로 내용만 출력하세요.`;
+    const text = await callClaude(prompt, 500);
+    if (text) {
+      textarea.value = text;
+      textarea.style.borderColor = '#4CAF50';
+      setTimeout(() => { textarea.style.borderColor = ''; }, 2000);
+    }
+  } catch(e) {
+    if (e.message !== 'API 키 없음') alert('업그레이드 실패: ' + e.message);
+  }
+
+  textarea.style.opacity = '1';
+  btn.disabled = false; btn.textContent = '✦ 주제 업그레이드';
+}
+</script>
+</body>
+</html>
