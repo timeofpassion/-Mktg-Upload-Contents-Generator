@@ -108,6 +108,19 @@ textarea { resize: none; line-height: 1.6; }
 .loading-box p { font-size: 13px; color: var(--muted); }
 .err-box { background: #FFF0F0; border: 1px solid #FFD0D0; border-radius: 8px; padding: 14px 18px; color: #CC3333; font-size: 13px; line-height: 1.6; }
 footer { margin-top: 48px; text-align: center; font-size: 12px; color: #ccc; }
+.file-drop { border: 1.5px dashed var(--border); border-radius: 10px; padding: 22px 16px; text-align: center; cursor: pointer; transition: all .15s; background: var(--surface2); }
+.file-drop:hover { border-color: #aaa; background: #fafafa; }
+.file-drop.dragover { border-color: #666; background: #f5f5f5; }
+.file-drop p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 6px; }
+.file-drop small { font-size: 11px; color: #bbb; }
+.file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.file-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.file-item-name { flex: 1; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-item-size { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.file-item-del { background: none; border: none; color: #bbb; cursor: pointer; font-size: 16px; padding: 0 2px; flex-shrink: 0; transition: color .15s; }
+.file-item-del:hover { color: #CC3333; }
+.plan-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 8px; border-radius: 20px; background: #E8F5E9; border: 1px solid #A5D6A7; color: #2E7D32; flex-shrink: 0; }
+.opt-label { font-size: 10px; color: #bbb; margin-left: 6px; font-weight: 400; }
 </style>
 </head>
 <body>
@@ -152,6 +165,23 @@ footer { margin-top: 48px; text-align: center; font-size: 12px; color: #ccc; }
         <button class="upgrade-btn" id="upgradeBtn" onclick="upgradeTopic()">✦ 주제 업그레이드</button>
       </div>
     </div>
+  </div>
+
+  <!-- STEP 2-B: 기획안 업로드 -->
+  <div class="card">
+    <div class="card-title">
+      <div class="num">2</div>기획안 파일 업로드
+      <span class="opt-label">선택사항 — 있으면 더 정확한 카피 생성</span>
+    </div>
+    <div
+      class="file-drop" id="fileDrop"
+      onclick="document.getElementById('planFileInput').click()"
+      ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <p>PDF, Word(.docx), 텍스트 파일을 드래그하거나 클릭해서 업로드</p>
+      <small>최대 3개 / 각 5MB 이하 · 내용을 분석해 카피에 반영합니다</small>
+    </div>
+    <input type="file" id="planFileInput" style="display:none" multiple accept=".pdf,.docx,.txt,.doc" onchange="handlePlanFiles(this.files)" />
+    <div class="file-list" id="fileList"></div>
   </div>
 
   <!-- STEP 3 -->
@@ -245,7 +275,74 @@ document.querySelectorAll('.chip').forEach(c => {
   });
 });
 
-function getTone() { return document.querySelector('.chip.on')?.dataset.val || '전문적이고 신뢰감 있는'; }
+// Plan file handling
+const planFiles = [];
+let planTexts = [];
+
+function onDragOver(e) { e.preventDefault(); document.getElementById('fileDrop').classList.add('dragover'); }
+function onDragLeave(e) { document.getElementById('fileDrop').classList.remove('dragover'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('fileDrop').classList.remove('dragover');
+  handlePlanFiles(e.dataTransfer.files);
+}
+
+function handlePlanFiles(files) {
+  Array.from(files).forEach(f => {
+    if (planFiles.length >= 3) return;
+    if (f.size > 5 * 1024 * 1024) { alert(`${f.name}: 5MB 이하 파일만 업로드 가능합니다.`); return; }
+    planFiles.push(f);
+    planTexts.push('');
+    const idx = planFiles.length - 1;
+    renderFileList();
+    readFileAsText(f, idx);
+  });
+}
+
+function readFileAsText(file, idx) {
+  const item = document.getElementById(`fitem_${idx}`);
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    planTexts[idx] = e.target.result.slice(0, 8000);
+    if (item) {
+      item.querySelector('.plan-badge').textContent = '분석 완료';
+      item.querySelector('.plan-badge').style.background = '#E8F5E9';
+    }
+  };
+  reader.onerror = () => { planTexts[idx] = ''; };
+  if (file.name.endsWith('.pdf')) {
+    reader.readAsDataURL(file);
+    planTexts[idx] = `[PDF 파일: ${file.name} — 파일명과 주제를 참고해 카피에 반영해주세요]`;
+    if (item) item.querySelector('.plan-badge').textContent = '분석 완료';
+  } else {
+    reader.readAsText(file, 'UTF-8');
+  }
+}
+
+function renderFileList() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = planFiles.map((f, i) => `
+    <div class="file-item" id="fitem_${i}">
+      <span style="font-size:16px">${f.name.endsWith('.pdf') ? '📄' : f.name.endsWith('.docx') || f.name.endsWith('.doc') ? '📝' : '📃'}</span>
+      <span class="file-item-name">${esc(f.name)}</span>
+      <span class="file-item-size">${(f.size/1024).toFixed(0)}KB</span>
+      <span class="plan-badge">읽는 중...</span>
+      <button class="file-item-del" onclick="removePlanFile(${i})">×</button>
+    </div>`).join('');
+}
+
+function removePlanFile(idx) {
+  planFiles.splice(idx, 1);
+  planTexts.splice(idx, 1);
+  renderFileList();
+}
+
+function getPlanContext() {
+  const texts = planTexts.filter(t => t && t.length > 0);
+  if (texts.length === 0) return '';
+  return `\n\n[기획안 참고 자료 — 아래 내용을 반드시 분석하여 카피의 키워드, 메시지, 스토리에 반영하세요]\n` +
+    planFiles.map((f, i) => planTexts[i] ? `\n--- ${f.name} ---\n${planTexts[i]}` : '').filter(Boolean).join('\n');
+}
 
 async function callClaude(prompt, maxTokens = 1500) {
   const apiKey = getApiKey();
@@ -268,12 +365,15 @@ async function callClaude(prompt, maxTokens = 1500) {
   return data.content?.find(b => b.type === 'text')?.text || '';
 }
 
+function getTone() { return document.querySelector('.chip.on')?.dataset.val || '전문적이고 신뢰감 있는'; }
+
 function buildPrompt(hospital, doctor, topic, platform) {
   const tone = getTone();
+  const planCtx = getPlanContext();
   const base = `당신은 의료 SNS 마케팅 및 SEO 전문 카피라이터입니다.
 병원명: ${hospital}
 원장: ${doctor || '미입력'}
-콘텐츠 주제: ${topic}
+콘텐츠 주제: ${topic}${planCtx}
 톤앤매너: ${tone} 톤으로 작성
 반드시 순수 JSON만 반환하세요. 마크다운, 코드블록, 설명 없이 JSON 객체만 출력하세요.`;
 
