@@ -245,16 +245,6 @@ footer {
           ✦ 주제 업그레이드
         </button>
       </div>
-      <div class="upgraded-box" id="upgradedBox">
-        <div class="upgraded-header">
-          <span class="upgraded-label">✦ 업그레이드된 주제</span>
-          <div class="upgraded-actions">
-            <button class="act-btn" onclick="dismissUpgrade()">닫기</button>
-            <button class="act-btn apply" onclick="applyUpgrade()">이걸로 적용</button>
-          </div>
-        </div>
-        <div class="upgraded-content" id="upgradedContent"></div>
-      </div>
     </div>
   </div>
 
@@ -297,6 +287,30 @@ footer {
 
 <script>
 const ANTHROPIC_API_KEY = 'YOUR_API_KEY_HERE';
+const API_URL = 'https://api.anthropic.com/v1/messages';
+
+async function callClaude(prompt, maxTokens = 1500) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API 오류 ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content?.find(b => b.type === 'text')?.text || '';
+}
 
 const PLATS = [
   { id: 'youtube',   label: 'YouTube',   color: '#FF0000' },
@@ -346,14 +360,7 @@ function safeParseJSON(raw) {
 }
 
 async function callAPI(hospital, doctor, topic, platId) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 1500, messages: [{ role: 'user', content: buildPrompt(hospital, doctor, topic, platId) }] })
-  });
-  if (!res.ok) throw new Error(`API 오류 ${res.status}`);
-  const data = await res.json();
-  const raw = data.content?.find(b => b.type === 'text')?.text || '';
+  const raw = await callClaude(buildPrompt(hospital, doctor, topic, platId), 1500);
   if (!raw) throw new Error('빈 응답');
   return safeParseJSON(raw);
 }
@@ -458,37 +465,33 @@ async function upgradeTopic() {
   if (!topic) { document.getElementById('topic').focus(); return; }
 
   const btn = document.getElementById('upgradeBtn');
-  btn.disabled = true; btn.textContent = '업그레이드 중...';
+  const textarea = document.getElementById('topic');
+  btn.disabled = true;
+  btn.textContent = '업그레이드 중...';
+  textarea.style.opacity = '0.5';
 
   const prompt = `당신은 의료 SNS 마케팅 전문가입니다. 아래 콘텐츠 주제를 SNS 카피 작성에 더 유용하도록 업그레이드해주세요.
 병원명: ${hospital||'미입력'}
 원장: ${doctor||'미입력'}
 원본 주제: ${topic}
 기준: 핵심 메시지 구체화, 타겟 시청자가 궁금해할 세부 내용 추가, SEO 핵심 키워드 2~3개 포함, 각 채널 카피에 반영할 스토리 포인트 제안.
-결과는 3~5줄 텍스트만. 제목/마크다운 없이 바로 내용만 출력.`;
+결과는 3~5줄 텍스트만. 제목/마크다운 없이 바로 내용만 출력하세요.`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 500, messages: [{ role: 'user', content: prompt }] })
-    });
-    const data = await res.json();
-    const text = data.content?.find(b=>b.type==='text')?.text || '';
-    document.getElementById('upgradedContent').textContent = text;
-    document.getElementById('upgradedBox').classList.add('show');
+    const text = await callClaude(prompt, 500);
+    if (text) {
+      textarea.value = text;
+      textarea.style.borderColor = '#4CAF50';
+      setTimeout(() => { textarea.style.borderColor = ''; }, 2000);
+    }
   } catch(e) {
-    alert('업그레이드 실패. 다시 시도해주세요.');
+    alert('업그레이드 실패: ' + e.message);
   }
 
-  btn.disabled = false; btn.textContent = '✦ 주제 업그레이드';
+  textarea.style.opacity = '1';
+  btn.disabled = false;
+  btn.textContent = '✦ 주제 업그레이드';
 }
-
-function applyUpgrade() {
-  const text = document.getElementById('upgradedContent').textContent;
-  if (text) { document.getElementById('topic').value = text; document.getElementById('upgradedBox').classList.remove('show'); }
-}
-function dismissUpgrade() { document.getElementById('upgradedBox').classList.remove('show'); }
 </script>
 </body>
 </html>
